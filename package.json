@@ -1,0 +1,16 @@
+{
+  "name": "backtest-historical-example",
+  "version": "0.1.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "@fugle/backtest": "^0.1.0-beta.2",
+    "@fugle/realtime": "^0.4.0",
+    "dotenv": "^16.0.3",
+    "luxon": "^3.3.0",
+    "technicalindicators": "^3.1.0"
+  }
+}
