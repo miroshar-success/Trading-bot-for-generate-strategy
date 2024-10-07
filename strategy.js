@@ -1,41 +1,50 @@
 const { Strategy } = require('@fugle/backtest');
-const { SMA, CrossUp, CrossDown } = require('technicalindicators');
+const { SMA, EMA, RSI, CrossUp, CrossDown } = require('technicalindicators');
 
-class SmaCross extends Strategy {
-  params = { n1: 20, n2: 60 };
+// Function to generate dynamic strategies
+function createStrategy({ shortPeriod, longPeriod, type = 'SMA' }) {
+  class DynamicStrategy extends Strategy {
+    params = { shortPeriod, longPeriod };
 
-  init() {
-    const lineA = SMA.calculate({
-      period: this.params.n1,
-      values: this.data['close'].values,
-    });
-    this.addIndicator('lineA', lineA);
+    init() {
+      const values = this.data['close'].values;
 
-    const lineB = SMA.calculate({
-      period: this.params.n2,
-      values: this.data['close'].values,
-    });
-    this.addIndicator('lineB', lineB);
+      // Choose between different types of moving averages
+      const shortMA = type === 'SMA'
+        ? SMA.calculate({ period: this.params.shortPeriod, values })
+        : EMA.calculate({ period: this.params.shortPeriod, values });
 
-    const crossUp = CrossUp.calculate({
-      lineA: this.getIndicator('lineA'),
-      lineB: this.getIndicator('lineB'),
-    });
-    this.addSignal('crossUp', crossUp);
+      const longMA = type === 'SMA'
+        ? SMA.calculate({ period: this.params.longPeriod, values })
+        : EMA.calculate({ period: this.params.longPeriod, values });
 
-    const crossDown = CrossDown.calculate({
-      lineA: this.getIndicator('lineA'),
-      lineB: this.getIndicator('lineB'),
-    });
-    this.addSignal('crossDown', crossDown);
+      this.addIndicator('shortMA', shortMA);
+      this.addIndicator('longMA', longMA);
+
+      // Create signals for crossovers
+      const crossUp = CrossUp.calculate({
+        lineA: this.getIndicator('shortMA'),
+        lineB: this.getIndicator('longMA'),
+      });
+      this.addSignal('crossUp', crossUp);
+
+      const crossDown = CrossDown.calculate({
+        lineA: this.getIndicator('shortMA'),
+        lineB: this.getIndicator('longMA'),
+      });
+      this.addSignal('crossDown', crossDown);
+    }
+
+    next(ctx) {
+      const { index, signals } = ctx;
+      if (index < this.params.shortPeriod || index < this.params.longPeriod) return;
+
+      if (signals.get('crossUp')) this.buy({ size: 1000 });
+      if (signals.get('crossDown')) this.sell({ size: 1000 });
+    }
   }
 
-  next(ctx) {
-    const { index, signals } = ctx;
-    if (index < this.params.n1 || index < this.params.n2) return;
-    if (signals.get('crossUp')) this.buy({ size: 1000 });
-    if (signals.get('crossDown')) this.sell({ size: 1000 });
-  }
+  return DynamicStrategy;
 }
 
-exports.SmaCross = SmaCross;
+exports.createStrategy = createStrategy;

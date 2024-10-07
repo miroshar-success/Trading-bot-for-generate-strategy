@@ -1,3 +1,5 @@
 node_modules/
 config/openai-config.js
 .env.example
+.env
+output.html
